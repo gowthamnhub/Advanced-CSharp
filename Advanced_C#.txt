@@ -1,0 +1,832 @@
+Advanced C#:
+------------
+GENERICS:
+----------
+Generics help to have a type safety provided for the object / collection we are trying to store.
+In ArrayList also we can save collection, but the problem with that is; no restriction in the data type of items saved.
+
+   ArrayList list = new ArrayList();
+   list.Add(1);
+   list.Add("string text");
+   list.Add(true);
+   list.Add(book1);
+   
+   But in case of GenericList, List<int> list = new List<int>();
+								list.Add('kfjhsdkjfhdsjf') //gives compilation error.
+								
+	We can create a CustomGenericList like below;
+		
+		public class CustomGenericList<T>
+		{
+			private List<T> list;
+			
+			constructor()
+			{
+				list = new List<T>();
+			}
+			
+			public void Add(T item)
+			{
+				list.Add(item);
+			}
+		}
+		
+		I have a Book object with book name, id;
+			Book book = new Book(1, 'title');
+			var bookList = new GenericList<Book>();
+			bookList.Add(book); //since we created the GenericList class with Book as type, it will allow only book to get stored nothing else.
+			
+			//In this way we can also create GenericList list of type Author to store the details of Author
+			Author author = new Author(1001, 'Andrew');
+			var authorList = new GenericList<Author>();
+			authorList.Add(author);
+			
+	Similarly Dictionary can be created, Dictionary is a data structure uses internally hash table to store and retrieve objects which provides a fast and very efficient way of accessing data.
+	
+	It stores data in Key, Value format.
+	var Dictionary = new GenericDictionary<int, Book>(); it can take key as integer and value as book.
+	Dictionary.Add(1, book1);
+	
+		Sample:
+		--------
+			public class GenericDictionary<TKey, TValue>
+			{
+				private Hashtable hashtable = null;//in this we could see Dictionary<TKey, TValue> as object as well
+				public CustomDictionary()
+				{
+					hashtable = new Hashtable();
+				}
+				
+				public void Add(TKey key, TValue value)
+				{
+					if (key is null)
+					{
+					throw new Exception("Invalid Key");
+					}
+					if (!hashtable.ContainsKey(key))
+					{
+					hashtable.Add(key, value);
+					}
+					else
+					{
+					hashtable[key] = value;
+					}
+				}			
+			}
+			
+	Some times we have to apply constraints for the 'T' type else the program may not work.
+	For example;
+	-------------
+		public class Utilities
+		{
+			public int Max(int a, int b)
+			{
+				return a > b ? a : b;
+			}
+			
+			//same in Generic method
+			public T Max<T>(T a, T b) where T : IComparable //this is the constraint,
+			//always T should be implementing IComparable
+			{
+				//return (a > b) ? a : b;
+				//compilation error as it considers as object which do not have IComparable method
+			
+				//we change it like this
+				return a.CompareTo(b) > 0 ? a : b;
+			}
+		}
+		
+	Constraints can be;
+		where T : class	(for ref type)
+		where T : struct (for value type)
+		where T : Product (Product type)
+		where T : new()
+		
+------------------------------------------------------------------------------------------------------		
+		
+  public float DiscountCalculator<TProduct>(TProduct product) where TProduct : Product
+  {
+    //Book is of product type, so we will pass here book
+    // calculate discount for book and return price.
+    return product.price;
+  }
+  
+  //suppose for a given type we just have to return a new object
+  public T CreateNewInstance<T>() where T : new ()//T new object
+  {
+    return new T();
+  }
+
+------------------------------------------------------------------------------------------------------	  
+		
+			
+DELEGATE:
+----------
+	A delegate is an object which knows how to call a method or group of methods.
+	Simply, it is a reference or a pointer to a function.
+	
+	For example;
+	------------
+		I have a PhotoProcess library which applied some photo filters (brightness, contrast, sharpness etc.,) but 
+		from client side they want Blur to be added (consider somthing new they want to add) and with this we have to keep adding new 
+		filters and recompile and redeploy. Not a viable one right. To make this extensible? how can we do?
+		
+		We will have a delegate with signature(return, param types) as filter methods.(given example below)
+		From client side we will assign the filters.ApplyBrightness to the delegate before call process method in Processor.cs
+		and in processor -> we simply call filterHandler(photo) which will automatically call the methods that are assigned to it.
+		
+		From client side if needed they can create a new method blur method and pass it to the delegate as the same signature and call it inside
+		the processor and the blur will get applied and if need 
+	
+	------------------------------------------------------------------------
+		public delegate void PhotoFilterHandler(Photo photo); 
+		
+	-----------------Filter methods----------------------------------------	
+		public void ApplyBrightness(Photo photo)
+		{
+			Console.WriteLine("Applied Brightness");
+		}
+	------------------------------------------------------------------------
+	
+	Example:
+	--------
+  internal class PhotoProcessor
+  {
+    public delegate void PhotoFilterHandler(Photo photo); 
+    public Photo Process(string path, PhotoFilterHandler filterHandler)
+    {
+      var photo = Photo.Load(path);
+					//apply brightness, contrast, sharpness filters
+					//var filters = new PhotoFilters();
+					//filters.ApplyBrightness(photo);
+					//filters.ApplyContrast(photo);
+					//filters.ApplySharpness(photo);
+				
+					//PhotoFilterHandler filterHandler = filters.ApplyBrightness;
+					//filterHandler += filters.ApplyContrast;
+
+      filterHandler(photo);//delegate handler, this can have multiple methods assigned, it knows how to call all those.
+					//if suppose client wants a new filter, again photoFilters has to be modified, recompiled and redeployed.
+					
+	  Console.WriteLine("Some post processing operation being done....");
+	  
+      return photo;
+    }
+  }
+  
+  Client code:
+  ------------
+		using Delegates;
+
+		public class Program
+		{
+			public static void Main()
+			{
+				var photoPath = "";
+				PhotoProcessor photoProcessor = new PhotoProcessor();
+				var filters = new PhotoFilters();
+				// PhotoProcessor.PhotoFilterHandler filterHandler = filters.ApplyBrightness;
+				//filterHandler += filters.ApplyContrast;
+				PhotoProcessor.PhotoFilterHandler filterHandler = ApplyBlur;
+			
+				//photoProcessor.
+				photoProcessor.Process(photoPath, filterHandler);
+			}
+			
+			//new method of filtering needed from client side
+			public static void ApplyBlur(Photo photo)
+			{
+				Console.WriteLine("Applied Blur");
+			}
+		}
+
+  
+  There are two predefined delegates in .Net those are "Func" and "Action"
+	Func - takes methods which has return value.
+	Action - takes methods which return nothing.(void).
+	
+	so if we need to use these delegates in the above example, our delegate is also void, hence Action can be used.
+	Lets try how to use it.
+  
+  Client side - instead of assigning the method to custom delegate , we will try assign to Action delegate.
+  Yes it works... here is the slight change in the code to be done. 
+  Just remove custom delegate we created, and use Action<Photo> delegate in the respective places.
+  
+  Photo Processor with Action delegate
+  ------------------------------------
+    internal class PhotoProcessor
+	{
+    //public delegate void PhotoFilterHandler(Photo photo); 
+    public Photo Process(string path, Action<Photo> filterHandler)
+    {
+      var photo = Photo.Load(path);
+      //apply brightness, contrast, sharpness filters
+      //var filters = new PhotoFilters();
+      //filters.ApplyBrightness(photo);
+      //filters.ApplyContrast(photo);
+      //filters.ApplySharpness(photo);
+
+      //PhotoFilterHandler filterHandler = filters.ApplyBrightness;
+      //filterHandler += filters.ApplyContrast;
+
+      filterHandler(photo);//delegate handler, this can have multiple methods assigned, it knows how to call all those.
+      //if suppose client wants a new filter, again photoFilters has to be modified, recompiled and redeployed.
+
+      Console.WriteLine("Some post processing operation being done....");
+      return photo;
+    }
+  }
+	//client code
+  public static void Main()
+  {
+    var photoPath = "";
+    PhotoProcessor photoProcessor = new PhotoProcessor();
+    var filters = new PhotoFilters();
+    // PhotoProcessor.PhotoFilterHandler filterHandler = filters.ApplyBrightness;
+    //filterHandler += filters.ApplyContrast;
+    //PhotoProcessor.PhotoFilterHandler filterHandler = ApplyBlur;
+    Action<Photo> filterHandler = ApplyBlur;
+    //photoProcessor.
+    photoProcessor.Process(photoPath, filterHandler);
+  }
+
+  //new method of filtering needed from client side
+  public static void ApplyBlur(Photo photo)
+  {
+    Console.WriteLine("Applied Blur");
+  }
+}	
+		
+LAMBDA EXPRESSION:
+------------------
+It is basically an anonymous method with no access modifier/specifier - public, private, protected..., no return statement, no name.
+it is used for convenience, with less lines of code and achieve same thing/functionality.		
+
+basic structure of lambda expression is args => (goes to) expression.
+
+Below is the example code snippet:
+-----------------------------------
+using LambdaExpression;
+
+namespace Lambda
+{
+  public class Program
+  {
+    public static void Main()
+    {
+      Console.WriteLine(Square(5));//usual way of doing
+      //lambda expression
+      //args =>(goes to) expression
+      Func<int, int> square = (number) => number * number; 
+      /*function is created here and assigned to func delegate, we have not created it like below
+        one, simple straight forward, without return statement, no access specifier, no 
+        name */
+      Console.WriteLine(square(5));
+
+      //another example with multiplier
+      const int factor = 5;
+      Func<int, int> multiplier = (n) => n * factor;
+      Console.WriteLine(multiplier(10));
+
+      /***********In Practical Case*************/
+      var bookRepo = new BookRepository();
+      var booksList = bookRepo.GetAllBooks();
+      var cheapBooks = booksList.FindAll(b => b.price < 10);
+      /*this b=> b.price < 10 is predicate - also delegate read as b goes to expression */
+
+      foreach (var book in cheapBooks)
+      {
+        Console.WriteLine(book.title);
+      }
+    }
+
+    //new method of filtering needed from client side
+    static int Square(int number)
+    {
+      return number * number;
+    }
+  }
+}
+
+EVENTS and DELEGATES:
+=====================
+	What are Events and why we need them?
+	-------------------------------------
+		-> A mechanism for communicating between objects
+			-> when something happens inside an object it can notify other objects about that. why? 
+			-> because it can help building loosely coupled applications. (that is its class/components are not tightly coupled to each other)
+			-> loosely coupled applications helps extend applications without breaking one or more of its existing capabilities.
+
+	Consider the problem statement, when a video encoding is completed, we need to notify the sender via email message.
+	But in future, they need to sms service as well, in that case if we have the mailSender service inside the 
+	Encoding method, we need to make changes to encoding method, which is more prone as we are touching / changing the code in 
+	unwanted area and in the process we might end up breaking some logic.
+	
+	Then how can we avoid this situation, it should be like Encoder is seperate piece, and once done it notifies to subscribers saying 
+	done with encoding, subscribers(mailService, messageService) receives the notification and starts its processing.
+	
+	Publisher			Subscriber
+	---------			-----------
+	Encoder				MailService
+						MessageService
+						
+	Encoder does not know who is mailService/messageService. Then how can we establish this connection to let know mailService/messageService to trigger notifications as encoding is completed.
+	
+										Publisher - publishes an event.
+										Subscriber - receives an event.	
+										
+	So, here Encoder has to publish an event, for that we need three steps to be done;
+		-> create a delegate with signature thats going to be common for publisher and subscribers
+		-> create an event based on the delegate
+		-> Raise the event.
+		
+	  public delegate void VideoEncodedEventHandler(object source, EventArgs eventArgs); //by .net convention it is recommended to have object source (who calls this), any additional data we want to send	
+	  
+	  so now how the subscribers can be linked to the publisher.?
+	  In the client side, we will have mailService object, we will have method with same signature as the delegate we have created in 
+	  publisher, so that the method can be assigned to the eventHandler object of publishers and call the Encode() method which in turn
+	  calls onVideoEncoded method -> checks if there is any subscribers and call that respective method.
+	  
+	  See code snippet:
+	  ------------------
+		Client side:
+		-------------
+			Video video = new Video("video 1");
+			VideoEncoder videoEncoder = new VideoEncoder();
+			var mailService = new MailService();
+			videoEncoder.VideoEncoded += mailService.OnVideoEncoded;
+			//mail service is now assigned to event handler
+			
+			videoEncoder.Encode(video);
+			
+			public class MailService
+			{
+				public void OnVideoEncoded(object source, EventArgs args)
+				{
+					Console.WriteLine("Mail Service: Sending email...");
+				}
+			}
+	
+		VideoEncoder
+		--------------
+			using System;
+			using System.Collections.Generic;
+			using System.Linq;
+			using System.Text;
+			using System.Threading.Tasks;
+			
+			namespace EventsAndDelegates
+			{
+				public class VideoEventArgs : EventArgs
+				{
+					public Video video { get; set; }
+				}
+				internal class VideoEncoder
+				{
+					public VideoEncoder() { }
+					//create a delegate
+					public delegate void VideoEncodedEventHandler(object source, VideoEventArgs eventArgs);
+					//create an event based on that delegate
+					public event VideoEncodedEventHandler VideoEncoded;
+					//raise an event - for that we need a method responsible for that
+				
+					public void Encode(Video video)
+					{
+					Console.WriteLine("video encoding is in progress...");
+					Thread.Sleep(3000);
+				
+					OnVideoEncoded(video);//it is this method's responsibility to notify subscribers.
+					}
+				
+					//.Net framework recommendation is to have this method protected,
+					//virtual void and name starts with On
+					protected virtual void OnVideoEncoded(Video video)
+					{
+					//lets check if there any subscribers
+					if (VideoEncoded != null)
+						//VideoEncoded(this, VideoEventArgs.Empty); //if any subscribed, just call that method.
+						VideoEncoded(this, new VideoEventArgs()
+						{
+						video = video
+						});
+					}
+				}
+			}
+			
+	We can also use predefined EventHandler delegate from .Net framework instead of creating our own delegate.
+		just one line of change needed-
+			-----------------------------------------------------------------------------------------------------------------
+			public event EventHandler<VideoEventArgs> VideoEncoded; //instead of VideoEncodedEventHandler - custom delegate
+			-----------------------------------------------------------------------------------------------------------------
+				here <> gives what is that we are going to return, if we don't have <> or just EventHandler takes EventArgs as parameter.
+				
+	
+EXTENSION METHODS:
+===================
+	It is basically a method to extend a existing class or add a method to existing class without modifying the source code of the existing class.
+		Most oftenly we will be using the extension method already defined, very rarely we create them, Microsoft suggests to try to use 
+		the methods existing or if you have source code go ahead modify it, or create a new type deriving from it and have new method 
+		added, if nothing of this works then go for extension methods, as if in future Microsoft adds a method with the same name/signature as your
+		extension method, then your method will never get executed, as instance methods will be preferred than static methods.
+		
+Code Snippet:
+--------------
+public static class StringExtension
+{
+  public static string Shorten(this string str, int numberOfWords)
+  {
+    //some defensive programming here
+    if (numberOfWords < 0)
+      throw new ArgumentOutOfRangeException(
+        "numberOfWords should be greater than or equal to 0");
+
+    if (numberOfWords == 0) return str;
+
+    //if it is valid then split the string to the number of words and return
+    if (str.Length <= numberOfWords) return str;
+
+    var words = str.Split(' ').Take(numberOfWords);
+    var shortenString = string.Join(' ', words) + "...";
+    return shortenString;
+  }
+}
+
+Client:
+-------
+string post = "This is a very very long blog post. This is a very very long blog post." +
+              "This is a very very long blog post. ";
+
+/*suppose we want to add a method to shorten the blog post to just have 5 words*/
+var shortenPost = post.Shorten(5);
+
+Console.WriteLine(shortenPost);	//prints This is a very very...
+
+LINQ:
+=====
+	it stands for Language Integrated Query.
+	gives ability to query objects in C# natively.
+		-> can query objects in memory eg: .net collections (LINQ to objects)
+		-> can query Databases (LINQ to entities)
+		-> can query XML (LINQ to XML)
+		-> Ado.Net datasets (LINQ to datasets)
+		
+LINQ extension methods (example):
+-----------------------------------
+/*LINQ extension methods*/
+var cheapBooks = books
+  .Where(b => b.price < 10)
+  .OrderByDescending(b => b.title)
+  .Select(b => b.title);
+  
+/*LINQ query operators - always start from and ends with select */
+var cheaperBooks = from b in books
+                   where b.price < 10
+                   orderby b.title
+                   select b; 
+				   
+Some useful extension methods from LINQ:
+----------------------------------------
+books.Where() - filtering
+books.Single()
+books.SingleOrDefault()
+
+books.First()
+books.FirstOrDefault()
+
+books.Last()
+books.LastOrDefault()
+
+books.Skip(10).Take(10) - helps in paging the data
+
+books.Min(b=> b.price) - fetches min price
+books.Max(b=> b.price)
+books.Sum(b=> b.price)
+books.Average(b=> b.price)
+
+books.Count()
+
+NULLABLE TYPES:
+===============
+	Basically for value types, we cannot assign null value. But in real life, there can be situations where we have to set it to null.
+	for example for Birthday, in DB it can be null as the user may not have given the Birthday details.
+	In that case, c# DateTime Birthday property we have to set to null. How do we do that? using Nullables.
+	
+	Nullable<DateTime> Birthday = null; => DateTime? Birthday = null;
+	
+	it has methods and properties to access data inside it. 
+		-> GetValueOrDefault() to return value if assigned if not return default value.
+		-> HasValue Property to check if it has assigned any value.
+		-> Value property to get the value.
+
+Null Coelescing Operator
+-------------------------
+//Null coelescing operator => read as if date1 has value assign it, else assign right side.
+DateTime date5 = date1 ?? DateTime.Today;	
+
+
+DYNAMICS:
+=========
+	Programming Language divided to two types:
+		-> Statically Typed Languages - C#, Java (resolution of types, members, methods happen at compile time)
+		-> Dynamically Types Languages - Ruby, JavaScript, Python (resolution of types, members, methods happen at run time)
+
+		Dynamic Languages are little bit easier and faster to code with but at flip side, since no compile time check, we have to run 
+more unit tests to make sure the application behaves fine at run time.	
+
+		It is more beneficial for COM (eg writing office applications word, excel).
+		Without it we have to use Reflection, it is the way to inspect the metadata of the type and access properties and methods.
+		
+		Code Snippet:
+		-------------
+			//string obj = "Gowthaman";
+			//obj = 10;//compile error
+			//but dynamics
+			dynamic obj = "Gowthaman";
+			obj = 200;			
+			Console.WriteLine(obj);
+			
+	With dynamic it will automatically do type casting during run time, most often we don't need to do type conversion.
+
+EXCEPTION HANDLING:
+===================
+		In C#, we can use Exception Handling to deal with unexpected or exceptional situations that arise when a program is running.
+		As .Net developers we need to learn how to handle exceptions that arise from program/applications effectively.		
+		We can have multiple catch blocks starting from most specific ones to most generic ones.
+		
+		There is also finally block.
+		In C#, there are classes that access unmanaged resources(that is resources that are not managed by CLR) so there is no garbage 
+		collection applied to them. 
+			Eg: File handles, DB connections, network connections, graphic handles 
+		In these cases, we need to manually do the clean up. Now any class that uses unmanaged resources is expected to implement an IDisposable,
+		which has a Dispose method which does the clean up (release allocated resources).
+		
+FileHandling Code Snippet:
+---------------------------
+using System.IO;
+
+public class FileHandling
+{
+  public void ReadStream()
+  {
+    //Unmanaged Resource 
+    try
+    {
+      StreamReader streamReader = streamReader = new StreamReader(@"C:\Users\1029693\Documents\Star_Healt.txt");
+
+      try
+      {
+        var content = streamReader.ReadToEnd();
+        Console.WriteLine(content);
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e);
+        throw;
+      }
+      finally
+      {
+        streamReader.Dispose();
+      }
+    }
+    catch (Exception e)
+    {
+      Console.WriteLine(e);
+      throw;
+    }
+  }
+}
+
+Client Side:
+--------------
+// See https://aka.ms/new-console-template for more information
+
+using System.Diagnostics;
+
+try
+{
+  int a = 10;
+  int b = 10; //0
+  var calculator = new Calculator();
+  var result = calculator.Divide(a, b);
+  Console.WriteLine(result);
+  FileHandling fileHandling = new FileHandling();
+  fileHandling.ReadStream();
+}
+catch (DivideByZeroException)
+{
+  Console.WriteLine("You cannot divide by 0");
+}
+catch (FileNotFoundException)
+{
+  Console.WriteLine("File could not be found!");
+}
+catch (Exception ex)
+{
+  //log the error somewhere for analysis
+  Console.WriteLine("sorry, an exception occurred\n\n." + ex.StackTrace);
+}
+
+More cleaner way to do this is by using statement;
+----------------------------------------------------
+  try
+  {
+    //this using will automatically dispose that object created inside it.
+    using (StreamReader streamReader = new StreamReader(@"C:\Users\1029693\Documents\Star_Healt.txt"))
+    {
+      var content = streamReader.ReadToEnd();
+      Console.WriteLine(content);
+    }
+  }
+  catch (Exception e)
+  {
+    Console.WriteLine(e);
+    throw;
+  }
+}
+
+
+		
+We can also create our own exception to wrap the exception in meaning ful way to log and analyse:
+
+Code snippet Youtube API:
+-------------------------
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ExceptionHandling
+{
+  internal class YouTubeApi
+  {
+    public YouTubeApi()
+    {
+      
+    }
+
+
+    public List<Video> GetAllVideos()
+    {
+      try
+      {
+        throw new Exception("some low level exception like parsing, network exception...");
+      }
+      catch (Exception e)
+      {
+        //before throw lets wrap it to meaning ful exception for logging and analysis
+        throw new YouTubeException("could not fetch the video from youtube", e);
+      }
+    }
+  }
+}
+
+
+namespace ExceptionHandling;
+
+public class YouTubeException : Exception
+{
+  public YouTubeException(string message, Exception e) : base(message, e)
+  {
+
+  }
+}		
+				   
+				   
+Asynchronous Programming:
+==========================
+Synchronous
+------------
+		--> Program is executed line by line, one at a time.
+		--> when a function is called, execution has to wait until the function returns.
+		
+Asynchronous
+------------
+		--> when a function is called, execution continues to the next line, without waiting for the function to complete.		
+		--> it basically improves responsiveness of the application.
+		
+	Real world examples:
+	-----------------------
+		Windows media player - we can resize, pause, forward, animation etc.,
+		Web browser - new tab, resize, downloading etc.,
+		
+	When to use asynchronous?
+	--------------------------
+		-> Accessing the web
+		-> Accessing files and DB
+		-> Working with images
+	How?
+	-----
+		Multithreading
+		Callbacks
+		
+		Both these are complex to learn and understand.
+		
+	New approach since 4.5 .Net introduced called "Task-based asynchronous model" achieved using async/await
+		Task - represents the state of an asynchronous object.
+			-> Async/Await
+			
+	await keyword does not block the execution it just returns the control to the caller to continue the next instructions, this just tells runtime it is long running task, so once done it works like a callback function to continue next line in this method.
+    These are all done by async/await keyword for us.		
+			
+	Use cases:
+	----------
+		Like Windows Forms, WPF applications where we have file operations, web, db connections etc.
+		What about web applications?
+			-> well in web applications, the UI is not in the same process, its on the clients machine, so does async programming help improves
+			Web applications?
+				Well when a request is sent to the server, thread is allocated to process and serve the request, but threads are limited, if all threads are busy the request has to wait for until one thread is free to process it.
+					Only way to improve this is need to add more servers. (Scaling out)
+					
+				In this case, async model can be used to improve, when a thread has to execute a blocking operation, the control immediately
+				returns to the thread and that thread can be used to handle another request,
+					when the blocking operation completed, this thread or any other thread can process it. 
+					
+			await keyword can be used only within the async method.
+			
+Done with the help of Windows Forms:
+-------------------------------------
+using System.Net;
+
+namespace AsyncAwait
+{
+  public partial class Form1 : Form
+  {
+    public Form1()
+    {
+      InitializeComponent();
+    }
+
+    private void Form1_Load(object sender, EventArgs e)
+    {
+
+    }
+
+    private async void button1_Click(object sender, EventArgs e)
+    {
+      DownloadHtmlAsync("https://msdn.microsoft.com");
+	  MessageBox.Show("Waiting for html to downloaded...");
+      var html = await GetHtmlAsync("https://msdn.microsoft.com"); //await always inside async - just tells runtime, this long running you can go back and once this done you can come back, this way caller is not blocked due to this long running operation.
+      MessageBox.Show(html.Substring(0, 30));
+    }
+
+    private async Task<string> GetHtmlAsync(string url)
+    {
+      var webClient = new WebClient();
+      return await webClient.DownloadStringTaskAsync(url);
+    }
+
+    private string GetHtml(string url)
+    {
+      var webClient = new WebClient();
+      return webClient.DownloadString(url);
+    }
+
+    private async void DownloadHtmlAsync(string url)
+    {
+      var webClient = new WebClient();
+      var html = await webClient.DownloadStringTaskAsync(url);//await keyword does block the execution it just returns the control to the
+                                                              //caller to continue the next instructions, this just tells runtime it is long running 
+                                                              //task, so once done it works like a callback function to continue next line in this method.
+                                                              //These are all done by async/await keyword for us.
+      
+      using (var streamWriter = new StreamWriter(@"C:\Users\1029693\Documents\result.html"))
+      {
+        await streamWriter.WriteAsync(html);
+      }
+    }
+
+    private void DownloadHtml(string url)
+    {
+      var webClient = new WebClient();
+      var html = webClient.DownloadString(url);
+  
+      using (var streamWriter = new StreamWriter(@"C:\Users\1029693\Documents\result.html"))
+      {
+        streamWriter.Write(html);
+      }
+    }
+  }
+}
+
+StringBuilder vs String:
+--------------------------
+string - creates new memory every time we change string variable. means it is immutable.
+StringBuilder - can change the string object without creating new memory, it is mutable.
+
+string a = "a";
+string b = "b"
+a = "c" //does not alter the a object, but creates a new object in a new memory space.
+
+StringBuilder a = new StringBuilder("a");
+string b = "b";
+a.append(b);
+
+			
+		
+		
+		
+	
+	
+				
+				
